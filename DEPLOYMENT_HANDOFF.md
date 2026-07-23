@@ -21,19 +21,23 @@ https://cancer-support-mobile-a11y-86fb53.vercel.app
 ## Current MVP Features
 
 ### Core Flow
-- **Structured Questionnaire** (4 questions, one per screen)
+- **Structured Questionnaire** (7 questions, one per screen)
   - Q1: Support need (4 options)
   - Q2: Household income band (3 options: B40, M40, unknown)
   - Q3: Treatment facility (4 options: government, private, both, not-sure)
-  - Q4: State selection (16 states + 3 territories, **optional**)
+  - Q4: KWSP membership (yes/no/not sure, **optional**)
+  - Q5: Insurance/takaful coverage (yes/no/not sure, **optional**)
+  - Q6: Include NGO/zakat options (yes/no/not sure, **optional**)
+  - Q7: State selection (16 states + 3 territories, **optional**)
   - Back/Next navigation with progress bar
+  - Progress persists across an accidental refresh (sessionStorage)
 
 ### Results Display
-- **3 Mock Routes** returned based on answers:
-  1. MAKNA Bursary (cancer treatment support)
-  2. mySalam (B40 critical illness support)
-  3. PeKa B40 (B40 health screening)
+- **23 routes** in the aid database, matched against answers via the RYTS Engine
+- Each result shows a **match confidence label** (Likely relevant / Maybe relevant /
+  Not enough information / Needs official verification) plus a plain-language reason
 - Each route includes: summary, verification note, missing info, documents needed, final decision maker, official source link
+- **Download checklist** button exports matched routes + documents as a text file
 
 ### Safety & Verification
 - **DISCLAIMER BOX**: "CareRytes shows possible routes based on your answers. The final decision always belongs to the official agency or provider."

@@ -7,6 +7,10 @@ import { buildChecklistText } from "@/lib/checklist";
 const SUPPORT_NEEDS = ["treatment-cost", "transport", "medicine-equipment", "general"] as const;
 const HOUSEHOLD_BANDS = ["b40", "m40", "unknown"] as const;
 const TREATMENT_FACILITIES = ["government", "private", "both", "not-sure"] as const;
+// "not-sure" also stands in for "unanswered" here — the engine treats a missing
+// value and an explicit "not-sure" identically, so a separate undefined case
+// would be redundant.
+const YES_NO_NOT_SURE = ["yes", "no", "not-sure"] as const;
 
 const locationOptions = questionnaire.find((q) => q.id === "locationState")?.options ?? [];
 const LOCATION_STATES: (string | undefined)[] = [undefined, ...locationOptions.map((o) => o.value)];
@@ -65,75 +69,93 @@ function main() {
   let zeroRouteCount = 0;
   const routeHitCounts = new Map<string, number>();
 
+  function runCombination(input: SupportCheckInput) {
+    try {
+      const matches = getRouteMatches(input);
+      const routeIds = matches.map((m) => m.route.id);
+      routeIds.forEach((id) => routeHitCounts.set(id, (routeHitCounts.get(id) ?? 0) + 1));
+      if (routeIds.length === 0) zeroRouteCount++;
+
+      // Scan the rendered copy of every matched route (including the engine's
+      // generated reason text) as a final safety net, on top of validateMockRoutes().
+      for (const { route, reason } of matches) {
+        const text = [
+          route.title,
+          route.routeSummary,
+          route.verificationNote,
+          reason,
+          ...route.missingInformation,
+          ...route.documentsToPrepare,
+        ].join(" ");
+        const unsafe = scanUnsafeTerms(text);
+        if (unsafe.length > 0) {
+          errorCount++;
+          results.push({
+            input,
+            routeIds,
+            error: `Route "${route.id}" contains forbidden terms: ${unsafe.join(", ")}`,
+          });
+        }
+      }
+
+      // Also scan the exported checklist text (the same content a user
+      // downloads and brings to a hospital/agency counter).
+      if (matches.length > 0) {
+        const checklistText = buildChecklistText(matches, new Date("2026-01-01"));
+        const unsafeChecklist = scanUnsafeTerms(checklistText);
+        if (unsafeChecklist.length > 0) {
+          errorCount++;
+          results.push({
+            input,
+            routeIds,
+            error: `Checklist export contains forbidden terms: ${unsafeChecklist.join(", ")}`,
+          });
+        }
+      }
+
+      results.push({ input, routeIds });
+    } catch (err) {
+      errorCount++;
+      results.push({
+        input,
+        routeIds: [],
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   for (const supportNeed of SUPPORT_NEEDS) {
     for (const householdBand of HOUSEHOLD_BANDS) {
       for (const treatmentFacility of TREATMENT_FACILITIES) {
-        for (const locationState of LOCATION_STATES) {
-          const input: SupportCheckInput = {
-            supportNeed,
-            householdBand,
-            treatmentFacility,
-            locationState,
-          };
-
-          try {
-            const matches = getRouteMatches(input);
-            const routeIds = matches.map((m) => m.route.id);
-            routeIds.forEach((id) => routeHitCounts.set(id, (routeHitCounts.get(id) ?? 0) + 1));
-            if (routeIds.length === 0) zeroRouteCount++;
-
-            // Scan the rendered copy of every matched route (including the engine's
-            // generated reason text) as a final safety net, on top of validateMockRoutes().
-            for (const { route, reason } of matches) {
-              const text = [
-                route.title,
-                route.routeSummary,
-                route.verificationNote,
-                reason,
-                ...route.missingInformation,
-                ...route.documentsToPrepare,
-              ].join(" ");
-              const unsafe = scanUnsafeTerms(text);
-              if (unsafe.length > 0) {
-                errorCount++;
-                results.push({
-                  input,
-                  routeIds,
-                  error: `Route "${route.id}" contains forbidden terms: ${unsafe.join(", ")}`,
+        for (const kwspMember of YES_NO_NOT_SURE) {
+          for (const hasInsurance of YES_NO_NOT_SURE) {
+            for (const includeNgoZakat of YES_NO_NOT_SURE) {
+              for (const locationState of LOCATION_STATES) {
+                runCombination({
+                  supportNeed,
+                  householdBand,
+                  treatmentFacility,
+                  kwspMember,
+                  hasInsurance,
+                  includeNgoZakat,
+                  locationState,
                 });
               }
             }
-
-            // Also scan the exported checklist text (the same content a user
-            // downloads and brings to a hospital/agency counter).
-            if (matches.length > 0) {
-              const checklistText = buildChecklistText(matches, new Date("2026-01-01"));
-              const unsafeChecklist = scanUnsafeTerms(checklistText);
-              if (unsafeChecklist.length > 0) {
-                errorCount++;
-                results.push({
-                  input,
-                  routeIds,
-                  error: `Checklist export contains forbidden terms: ${unsafeChecklist.join(", ")}`,
-                });
-              }
-            }
-
-            results.push({ input, routeIds });
-          } catch (err) {
-            errorCount++;
-            results.push({
-              input,
-              routeIds: [],
-              error: err instanceof Error ? err.message : String(err),
-            });
           }
         }
       }
     }
   }
 
-  const totalCombinations = SUPPORT_NEEDS.length * HOUSEHOLD_BANDS.length * TREATMENT_FACILITIES.length * LOCATION_STATES.length;
+  const totalCombinations =
+    SUPPORT_NEEDS.length *
+    HOUSEHOLD_BANDS.length *
+    TREATMENT_FACILITIES.length *
+    YES_NO_NOT_SURE.length *
+    YES_NO_NOT_SURE.length *
+    YES_NO_NOT_SURE.length *
+    LOCATION_STATES.length;
 
   console.log(`Total combinations tested: ${totalCombinations}`);
   console.log(`Combinations with 0 matched routes: ${zeroRouteCount}`);

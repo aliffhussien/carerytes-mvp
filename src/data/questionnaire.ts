@@ -3,6 +3,7 @@ import type {
   SupportCheckInput,
   SupportNeed,
   TreatmentFacility,
+  YesNoNotSure,
 } from "@/lib/engine";
 
 export type QuestionOption = {
@@ -14,6 +15,9 @@ export type QuestionId =
   | "supportNeed"
   | "householdBand"
   | "treatmentFacility"
+  | "kwspMember"
+  | "hasInsurance"
+  | "includeNgoZakat"
   | "locationState";
 
 export type Question = {
@@ -57,6 +61,39 @@ export const questionnaire: Question[] = [
     ],
   },
   {
+    id: "kwspMember",
+    title: "Are you a KWSP (EPF) member?",
+    helperText: "Optional. This helps us show KWSP withdrawal routes more accurately.",
+    optional: true,
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" },
+      { value: "not-sure", label: "Not sure" },
+    ],
+  },
+  {
+    id: "hasInsurance",
+    title: "Do you have insurance or takaful coverage?",
+    helperText: "Optional. This helps us show the insurance/takaful claim checklist only if it applies to you.",
+    optional: true,
+    options: [
+      { value: "yes", label: "Yes" },
+      { value: "no", label: "No" },
+      { value: "not-sure", label: "Not sure" },
+    ],
+  },
+  {
+    id: "includeNgoZakat",
+    title: "Would you like to include NGO or zakat/baitulmal options?",
+    helperText: "Optional. These routes may involve religious or charitable assistance criteria.",
+    optional: true,
+    options: [
+      { value: "yes", label: "Yes, include them" },
+      { value: "no", label: "No, skip these" },
+      { value: "not-sure", label: "Not sure yet" },
+    ],
+  },
+  {
     id: "locationState",
     title: "Which state are you in?",
     helperText: "Optional. Some routes may vary by state.",
@@ -86,6 +123,9 @@ export type QuestionnaireAnswers = Partial<{
   supportNeed: SupportNeed;
   householdBand: HouseholdBand;
   treatmentFacility: TreatmentFacility;
+  kwspMember: YesNoNotSure;
+  hasInsurance: YesNoNotSure;
+  includeNgoZakat: YesNoNotSure;
   locationState: string;
 }>;
 
@@ -100,6 +140,9 @@ export function toSupportCheckInput(
     supportNeed: answers.supportNeed,
     householdBand: answers.householdBand,
     treatmentFacility: answers.treatmentFacility,
+    kwspMember: answers.kwspMember,
+    hasInsurance: answers.hasInsurance,
+    includeNgoZakat: answers.includeNgoZakat,
     locationState: answers.locationState,
   };
 }

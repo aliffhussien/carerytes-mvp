@@ -3,11 +3,15 @@ import { mockRoutes, type SupportRoute } from "@/data/mockRoutes";
 export type SupportNeed = "treatment-cost" | "transport" | "medicine-equipment" | "general";
 export type HouseholdBand = "b40" | "m40" | "unknown";
 export type TreatmentFacility = "government" | "private" | "both" | "not-sure";
+export type YesNoNotSure = "yes" | "no" | "not-sure";
 
 export type SupportCheckInput = {
   supportNeed: SupportNeed;
   householdBand: HouseholdBand;
   treatmentFacility: TreatmentFacility;
+  kwspMember?: YesNoNotSure;
+  hasInsurance?: YesNoNotSure;
+  includeNgoZakat?: YesNoNotSure;
   locationState?: string;
 };
 
@@ -70,6 +74,7 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
   const isLowerIncomeBand = isB40 || isM40;
   const isGovernmentFacility =
     input.treatmentFacility === "government" || input.treatmentFacility === "both";
+  const includeNgoZakat = input.includeNgoZakat !== "no";
 
   const matches: RouteMatch[] = [];
 
@@ -78,8 +83,8 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
     if (route) matches.push({ route, matchLabel, reason });
   }
 
-  // MAKNA — cancer patients facing financial difficulty (B40 or M40).
-  if (isTreatmentCost && isLowerIncomeBand) {
+  // MAKNA — cancer patients facing financial difficulty (B40 or M40). NGO route, gated by includeNgoZakat.
+  if (isTreatmentCost && isLowerIncomeBand && includeNgoZakat) {
     addMatch(
       "makna-bursary",
       "Maybe relevant",
@@ -105,22 +110,38 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
     );
   }
 
-  // KWSP Health Withdrawal — KWSP membership was never asked, so this can't be more than "not enough information".
-  if (isTreatmentCost) {
-    addMatch(
-      "kwsp-health-withdrawal",
-      "Not enough information",
-      "This route depends on your KWSP membership and account balance, which this check didn't ask about."
-    );
+  // KWSP Health Withdrawal — now gated by the kwspMember answer when given.
+  if (isTreatmentCost && input.kwspMember !== "no") {
+    if (input.kwspMember === "yes") {
+      addMatch(
+        "kwsp-health-withdrawal",
+        "Likely relevant",
+        "You selected treatment cost support and told us you're a KWSP member — this route's core criterion."
+      );
+    } else {
+      addMatch(
+        "kwsp-health-withdrawal",
+        "Not enough information",
+        "This route depends on your KWSP membership and account balance, which this check didn't ask about."
+      );
+    }
   }
 
-  // KWSP Incapacitation Withdrawal — same membership gap, for the broader "general support" need.
-  if (isGeneralSupport) {
-    addMatch(
-      "kwsp-incapacitation-withdrawal",
-      "Not enough information",
-      "This route depends on your KWSP membership and stop-working date, which this check didn't ask about."
-    );
+  // KWSP Incapacitation Withdrawal — same membership gate, for the broader "general support" need.
+  if (isGeneralSupport && input.kwspMember !== "no") {
+    if (input.kwspMember === "yes") {
+      addMatch(
+        "kwsp-incapacitation-withdrawal",
+        "Maybe relevant",
+        "You're a KWSP member with a general support need — this route also depends on your stop-working date, which this check didn't ask about."
+      );
+    } else {
+      addMatch(
+        "kwsp-incapacitation-withdrawal",
+        "Not enough information",
+        "This route depends on your KWSP membership and stop-working date, which this check didn't ask about."
+      );
+    }
   }
 
   // TBP KKM — routed through government/university hospital, not income-tier gated.
@@ -132,8 +153,9 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
     );
   }
 
-  // Breast Cancer Foundation — diagnosis type and income threshold aren't asked in this check.
-  if (isTreatmentCost) {
+  // Breast Cancer Foundation — NGO route, gated by includeNgoZakat. Diagnosis type and
+  // income threshold still aren't asked in this check.
+  if (isTreatmentCost && includeNgoZakat) {
     addMatch(
       "breast-cancer-foundation",
       "Not enough information",
@@ -159,8 +181,9 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
     );
   }
 
-  // NKF Dialysis Welfare/Subsidy — dialysis/kidney involvement isn't asked in this check.
-  if (isTreatmentCost) {
+  // NKF Dialysis Welfare/Subsidy — NGO route, gated by includeNgoZakat. Dialysis/kidney
+  // involvement still isn't asked in this check.
+  if (isTreatmentCost && includeNgoZakat) {
     addMatch(
       "nkf-dialysis",
       "Not enough information",
@@ -168,17 +191,26 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
     );
   }
 
-  // Insurance/Takaful claim checklist — coverage isn't asked in this check.
-  if (isTreatmentCost) {
-    addMatch(
-      "insurance-takaful-checklist",
-      "Not enough information",
-      "This checklist applies if you have an insurance or takaful policy — this check didn't ask whether you're covered."
-    );
+  // Insurance/Takaful claim checklist — now gated by the hasInsurance answer when given.
+  if (isTreatmentCost && input.hasInsurance !== "no") {
+    if (input.hasInsurance === "yes") {
+      addMatch(
+        "insurance-takaful-checklist",
+        "Maybe relevant",
+        "You told us you have insurance or takaful coverage — this checklist applies, but your specific policy terms still need checking with your insurer."
+      );
+    } else {
+      addMatch(
+        "insurance-takaful-checklist",
+        "Not enough information",
+        "This checklist applies if you have an insurance or takaful policy — this check didn't ask whether you're covered."
+      );
+    }
   }
 
-  // State zakat medical aid — matched by location state; religion/Asnaf status is self-disclosed.
-  if (isTreatmentCost && input.locationState) {
+  // State zakat medical aid — gated by includeNgoZakat, then matched by location state;
+  // religion/Asnaf status is self-disclosed.
+  if (isTreatmentCost && includeNgoZakat && input.locationState) {
     const zakatRouteId = ZAKAT_STATE_ROUTE_IDS[input.locationState];
     if (zakatRouteId) {
       addMatch(
