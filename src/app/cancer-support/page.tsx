@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,11 +12,58 @@ import { getRouteMatches, type MatchLabel, type RouteMatch } from "@/lib/engine"
 import { DISCLAIMER_TEXT } from "@/lib/safety";
 import { RYTSAssistantBar } from "@/components/RYTSAssistantBar";
 
+// Session-scoped only (cleared when the tab closes) — this is enough to
+// survive an accidental refresh without persisting self-disclosed health
+// answers across browser sessions or devices.
+const PROGRESS_STORAGE_KEY = "carerytes-cancer-support-progress-v1";
+
+type StoredProgress = {
+  stepIndex: number;
+  answers: QuestionnaireAnswers;
+};
+
 export default function CancerSupportPage() {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({});
   const [assistantBarHeight, setAssistantBarHeight] = useState(96);
+  const [hasLoadedProgress, setHasLoadedProgress] = useState(false);
+
+  // Restore progress once on mount (after hydration, so server and first
+  // client render still match). sessionStorage can't be read during SSR or
+  // the first client render without causing a hydration mismatch, so this
+  // one-time restore intentionally happens in an effect rather than a
+  // useState initializer.
+  useEffect(() => {
+    try {
+      const raw = window.sessionStorage.getItem(PROGRESS_STORAGE_KEY);
+      if (raw) {
+        const stored = JSON.parse(raw) as Partial<StoredProgress>;
+        if (stored.answers) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time post-hydration restore from sessionStorage, not derived state
+          setAnswers(stored.answers);
+        }
+        if (typeof stored.stepIndex === "number") {
+          setStepIndex(Math.min(Math.max(stored.stepIndex, 0), questionnaire.length));
+        }
+      }
+    } catch {
+      // Corrupt or inaccessible storage (e.g. private browsing) — ignore and start fresh.
+    }
+    setHasLoadedProgress(true);
+  }, []);
+
+  // Persist on every change, once the initial restore has happened (so we
+  // don't immediately overwrite stored progress with the empty initial state).
+  useEffect(() => {
+    if (!hasLoadedProgress) return;
+    try {
+      const progress: StoredProgress = { stepIndex, answers };
+      window.sessionStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progress));
+    } catch {
+      // Storage unavailable — progress just won't survive a refresh this time.
+    }
+  }, [stepIndex, answers, hasLoadedProgress]);
 
   const isReviewStep = stepIndex === questionnaire.length;
   const currentQuestion = isReviewStep ? null : questionnaire[stepIndex];
@@ -52,18 +99,19 @@ export default function CancerSupportPage() {
   function handleRestart() {
     setAnswers({});
     setStepIndex(0);
+    try {
+      window.sessionStorage.removeItem(PROGRESS_STORAGE_KEY);
+    } catch {
+      // Storage unavailable — nothing to clear.
+    }
   }
 
   function handleAssistantCommand(command: string) {
     const cmd = command.toLowerCase().trim();
-    if (cmd === "start") {
-      setAnswers({});
-      setStepIndex(0);
+    if (cmd === "start" || cmd === "restart") {
+      handleRestart();
     } else if (cmd === "home") {
       router.push("/");
-    } else if (cmd === "restart") {
-      setAnswers({});
-      setStepIndex(0);
     }
   }
 
