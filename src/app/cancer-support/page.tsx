@@ -2,22 +2,27 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   questionnaire,
   toSupportCheckInput,
-  type QuestionId,
   type QuestionnaireAnswers,
 } from "@/data/questionnaire";
 import { getPossibleRoutes } from "@/lib/engine";
 import { DISCLAIMER_TEXT } from "@/lib/safety";
 import type { SupportRoute } from "@/data/mockRoutes";
+import { RYTSAssistantBar } from "@/components/RYTSAssistantBar";
 
 export default function CancerSupportPage() {
+  const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({});
 
   const isReviewStep = stepIndex === questionnaire.length;
   const currentQuestion = isReviewStep ? null : questionnaire[stepIndex];
+  const selectedAnswerValue = currentQuestion
+    ? answers[currentQuestion.id]
+    : undefined;
 
   const supportCheckInput = useMemo(
     () => toSupportCheckInput(answers),
@@ -28,16 +33,20 @@ export default function CancerSupportPage() {
     [supportCheckInput]
   );
 
-  function handleSelect(questionId: QuestionId, value: string) {
-    setAnswers((prev) => ({ ...prev, [questionId]: value }) as QuestionnaireAnswers);
-  }
-
-  function handleBack() {
-    setStepIndex((prev) => Math.max(0, prev - 1));
+  function handleSelect(value: string) {
+    if (!currentQuestion) return;
+    setAnswers((prev) => ({
+      ...prev,
+      [currentQuestion.id]: value,
+    }) as QuestionnaireAnswers);
   }
 
   function handleNext() {
     setStepIndex((prev) => Math.min(questionnaire.length, prev + 1));
+  }
+
+  function handleBack() {
+    setStepIndex((prev) => Math.max(0, prev - 1));
   }
 
   function handleRestart() {
@@ -45,25 +54,30 @@ export default function CancerSupportPage() {
     setStepIndex(0);
   }
 
-  const canContinue = Boolean(
-    currentQuestion &&
-      (currentQuestion.optional || answers[currentQuestion.id])
-  );
+  function handleAssistantCommand(command: string) {
+    const cmd = command.toLowerCase().trim();
+    if (cmd === "start") {
+      setAnswers({});
+      setStepIndex(0);
+    } else if (cmd === "home") {
+      router.push("/");
+    } else if (cmd === "restart") {
+      setAnswers({});
+      setStepIndex(0);
+    }
+  }
 
   return (
     <div className="flex flex-1 flex-col bg-background">
-      <header className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6">
+      <header className="border-b border-border px-4 py-4 sm:px-6">
         <Link
           href="/"
           className="text-lg font-bold tracking-tight text-teal-deep"
         >
           CareRytes
         </Link>
-        {!isReviewStep && (
-          <span className="text-sm text-text-muted">
-            Question {stepIndex + 1} of {questionnaire.length}
-          </span>
-        )}
+        <p className="mt-1 text-sm text-text-muted">RYTS Assistant</p>
+        <p className="text-xs text-text-muted">Guided support check</p>
       </header>
 
       {!isReviewStep && (
@@ -72,72 +86,108 @@ export default function CancerSupportPage() {
           role="progressbar"
           aria-valuenow={stepIndex + 1}
           aria-valuemin={1}
-          aria-valuemax={questionnaire.length + 1}
+          aria-valuemax={questionnaire.length}
           aria-label={`Question ${stepIndex + 1} of ${questionnaire.length}`}
         >
           <div
             className="h-1 bg-teal transition-all"
             style={{
-              width: `${((stepIndex + 1) / (questionnaire.length + 1)) * 100}%`,
+              width: `${((stepIndex + 1) / questionnaire.length) * 100}%`,
             }}
           />
         </div>
       )}
 
-      <main className="flex flex-1 flex-col px-4 py-8 sm:px-6 sm:py-10">
+      <main className="flex flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 pb-24">
         <div className="mx-auto flex w-full max-w-md flex-col gap-6 sm:max-w-lg">
-          {currentQuestion ? (
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-2">
-                <h2
-                  id="question-title"
-                  className="text-xl font-bold text-foreground sm:text-2xl"
-                >
+          {/* Questionnaire Question */}
+          {!isReviewStep && currentQuestion && (
+            <div className="flex flex-col gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">
                   {currentQuestion.title}
                 </h2>
                 {currentQuestion.helperText && (
-                  <p className="text-sm text-text-muted">
+                  <p className="mt-2 text-sm text-text-muted">
                     {currentQuestion.helperText}
                   </p>
                 )}
               </div>
 
-              <fieldset className="flex flex-col gap-4">
+              {/* Answer Options */}
+              <fieldset className="flex flex-col gap-2">
                 <legend className="sr-only">{currentQuestion.title}</legend>
-                {currentQuestion.options.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    role="radio"
-                    onClick={() =>
-                      handleSelect(currentQuestion.id, option.value)
-                    }
-                    aria-checked={answers[currentQuestion.id] === option.value}
-                    className={`flex min-h-12 items-center rounded-xl border px-4 py-3 text-base font-medium text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep ${
-                      answers[currentQuestion.id] === option.value
-                        ? "border-teal bg-teal-soft text-foreground"
-                        : "border-border bg-surface text-foreground hover:bg-surface-subtle"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+                {currentQuestion.options.map((option) => {
+                  const isSelected = selectedAnswerValue === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
+                      onClick={() => handleSelect(option.value)}
+                      className={`flex min-h-12 items-center rounded-lg border-2 px-4 py-3 text-sm font-medium text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep cursor-pointer ${
+                        isSelected
+                          ? "border-teal bg-teal-soft text-foreground"
+                          : "border-border bg-surface text-foreground hover:bg-surface-subtle"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
               </fieldset>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-6">
-              <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
-                Possible routes for your situation
-              </h1>
 
+              {/* Navigation Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  disabled={stepIndex === 0}
+                  className="flex-1 h-12 rounded-lg border border-border bg-surface px-4 font-semibold text-foreground transition-colors hover:bg-surface-subtle disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
+                >
+                  Back
+                </button>
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  disabled={
+                    selectedAnswerValue === undefined && !currentQuestion.optional
+                  }
+                  className="flex-1 h-12 rounded-lg border border-teal bg-teal px-4 font-semibold text-white transition-colors hover:bg-teal-deep disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Results Screen */}
+          {isReviewStep && (
+            <div className="flex flex-col gap-4">
+              <div>
+                <h2 className="text-xl font-bold text-foreground">
+                  Your possible routes
+                </h2>
+                <p className="mt-2 text-sm text-text-muted">
+                  Based on your answers, here are the possible routes that may be relevant. All routes need official verification from the agency or provider.
+                </p>
+              </div>
+
+              {/* Disclaimer */}
               <div className="rounded-2xl border border-info-border bg-info-bg p-4">
                 <p className="text-sm leading-6 text-info-text">
                   {DISCLAIMER_TEXT}
                 </p>
               </div>
 
+              {/* Routes or empty state */}
               {possibleRoutes.length > 0 ? (
-                <div className="flex flex-col gap-4" role="region" aria-label="Possible routes">
+                <div
+                  className="flex flex-col gap-4"
+                  role="region"
+                  aria-label="Possible routes"
+                >
                   {possibleRoutes.map((route) => (
                     <RouteCard key={route.id} route={route} />
                   ))}
@@ -152,16 +202,16 @@ export default function CancerSupportPage() {
                     Not enough information to show a clear possible route yet.
                   </p>
                   <p className="mt-2 text-sm text-text-muted">
-                    Try adjusting your answers or check official sources
-                    directly.
+                    Try adjusting your answers or check official sources directly.
                   </p>
                 </div>
               )}
 
+              {/* Restart button */}
               <button
                 type="button"
                 onClick={handleRestart}
-                className="flex h-12 w-full items-center justify-center rounded-xl border border-border bg-surface px-5 text-base font-semibold text-foreground transition-colors hover:bg-surface-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
+                className="flex h-12 w-full items-center justify-center rounded-xl border border-teal bg-teal px-5 text-base font-semibold text-white transition-colors hover:bg-teal-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
               >
                 Start another check
               </button>
@@ -170,31 +220,12 @@ export default function CancerSupportPage() {
         </div>
       </main>
 
-      {!isReviewStep && (
-        <div className="sticky bottom-0 border-t border-border bg-surface px-4 py-4 sm:px-6">
-          <div className="mx-auto flex w-full max-w-md gap-3 sm:max-w-lg">
-            {stepIndex > 0 && (
-              <button
-                type="button"
-                onClick={handleBack}
-                className="flex h-12 flex-1 items-center justify-center rounded-xl border border-border bg-surface px-5 text-base font-semibold text-foreground transition-colors hover:bg-surface-subtle focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
-              >
-                Back
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={!canContinue}
-              className="flex h-12 flex-1 items-center justify-center rounded-xl bg-teal px-5 text-base font-semibold text-white transition-colors hover:bg-teal-deep disabled:cursor-not-allowed disabled:bg-border disabled:text-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
-            >
-              {stepIndex === questionnaire.length - 1
-                ? "Find possible routes"
-                : "Continue"}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Floating RYTS Assistant Bar */}
+      <RYTSAssistantBar
+        currentStep={stepIndex}
+        isReviewStep={isReviewStep}
+        onCommand={handleAssistantCommand}
+      />
     </div>
   );
 }
