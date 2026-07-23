@@ -137,7 +137,7 @@ export default function Home() {
           <div className="rounded-2xl border border-info-border bg-info-bg p-4">
             <p className="text-sm leading-6 text-info-text">
               CareRytes is a navigator for possible support routes in Malaysia.
-              All routes are verified by official sources and require confirmation
+              All routes are verified by official sources and require verification
               from the agency or provider.
             </p>
           </div>
