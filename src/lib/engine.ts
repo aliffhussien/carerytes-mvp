@@ -68,6 +68,8 @@ const ZAKAT_REFERRAL_STATES = new Set(["kelantan", "penang", "sabah"]);
  */
 export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
   const isTreatmentCost = input.supportNeed === "treatment-cost";
+  const isTransport = input.supportNeed === "transport";
+  const isMedicineEquipment = input.supportNeed === "medicine-equipment";
   const isGeneralSupport = input.supportNeed === "general";
   const isB40 = input.householdBand === "b40";
   const isM40 = input.householdBand === "m40";
@@ -101,13 +103,28 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
     );
   }
 
-  // PeKa B40 — B40 health screening and support.
-  if (isTreatmentCost && isB40) {
-    addMatch(
-      "peka-b40",
-      "Maybe relevant",
-      "You selected treatment cost support and B40 household — PeKa B40 covers this, but your current STR/B40 status wasn't checked in this flow."
-    );
+  // PeKa B40 — B40 health screening, plus a verified transport incentive for MOH
+  // cancer treatment journeys and medical equipment assistance up to RM20,000.
+  if (isB40 && (isTreatmentCost || isTransport || isMedicineEquipment)) {
+    if (isTransport) {
+      addMatch(
+        "peka-b40",
+        "Maybe relevant",
+        "You selected transport support and B40 household — PeKa B40's transport incentive covers journeys for cancer treatment at MOH hospitals, but your current STR/B40 status and MOH hospital route weren't checked in this flow."
+      );
+    } else if (isMedicineEquipment) {
+      addMatch(
+        "peka-b40",
+        "Maybe relevant",
+        "You selected medicine/equipment support and B40 household — PeKa B40 includes medical equipment assistance up to RM20,000, but your current STR/B40 status wasn't checked in this flow."
+      );
+    } else {
+      addMatch(
+        "peka-b40",
+        "Maybe relevant",
+        "You selected treatment cost support and B40 household — PeKa B40 covers this, but your current STR/B40 status wasn't checked in this flow."
+      );
+    }
   }
 
   // KWSP Health Withdrawal — now gated by the kwspMember answer when given.
@@ -145,7 +162,8 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
   }
 
   // TBP KKM — routed through government/university hospital, not income-tier gated.
-  if (isTreatmentCost && isGovernmentFacility) {
+  // Verified as covering medical equipment/devices as well as general treatment cost.
+  if (isGovernmentFacility && (isTreatmentCost || isMedicineEquipment)) {
     addMatch(
       "tbp-kkm",
       "Maybe relevant",
@@ -181,14 +199,22 @@ export function getRouteMatches(input: SupportCheckInput): RouteMatch[] {
     );
   }
 
-  // NKF Dialysis Welfare/Subsidy — NGO route, gated by includeNgoZakat. Dialysis/kidney
-  // involvement still isn't asked in this check.
-  if (isTreatmentCost && includeNgoZakat) {
-    addMatch(
-      "nkf-dialysis",
-      "Not enough information",
-      "NKF supports dialysis/kidney patients specifically — this check didn't ask whether dialysis is involved in your treatment."
-    );
+  // NKF Dialysis Welfare/Subsidy — NGO route, gated by includeNgoZakat. Also covers a
+  // verified Patient Transport Subsidy. Dialysis/kidney involvement still isn't asked.
+  if ((isTreatmentCost || isTransport) && includeNgoZakat) {
+    if (isTransport) {
+      addMatch(
+        "nkf-dialysis",
+        "Not enough information",
+        "NKF runs a Patient Transport Subsidy alongside dialysis welfare support — this check didn't ask whether dialysis/kidney treatment is involved in your situation."
+      );
+    } else {
+      addMatch(
+        "nkf-dialysis",
+        "Not enough information",
+        "NKF supports dialysis/kidney patients specifically — this check didn't ask whether dialysis is involved in your treatment."
+      );
+    }
   }
 
   // Insurance/Takaful claim checklist — now gated by the hasInsurance answer when given.

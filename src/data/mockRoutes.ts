@@ -62,14 +62,14 @@ export const mockRoutes: SupportRoute[] = [
     title: "PeKa B40",
     provider: "ProtectHealth / KKM",
     routeSummary:
-      "A possible route for B40 households, covering health screening and support for non-communicable diseases, based on your answers.",
+      "A possible route for B40 households, covering health screening, a cancer treatment completion incentive, a transport incentive for MOH hospital journeys, and medical equipment assistance up to RM20,000, based on your answers.",
     verificationNote:
-      "Official source reviewed. This route needs official verification of your current STR / B40 status.",
+      "Official source reviewed. This route needs official verification of your current STR / B40 status, and the transport/equipment benefits need a Medical Social Work Officer or treating doctor at an MOH hospital.",
     finalDecisionBy: "ProtectHealth / KKM",
     sourceLabel: "Official source",
     officialSourceUrl: "https://protecthealth.com.my/peka-b40-eng/",
-    missingInformation: ["Current STR / B40 status details"],
-    documentsToPrepare: ["IC", "STR / B40 status check"],
+    missingInformation: ["Current STR / B40 status details", "Which specific benefit applies to your situation"],
+    documentsToPrepare: ["IC", "STR / B40 status check", "MOH hospital treatment/referral documentation, for transport or equipment benefits"],
   },
   {
     id: "kwsp-health-withdrawal",
@@ -124,7 +124,7 @@ export const mockRoutes: SupportRoute[] = [
     title: "Tabung Bantuan Perubatan KKM (TBP)",
     provider: "Ministry of Health Malaysia (KKM)",
     routeSummary:
-      "A possible route for patients receiving treatment at a government or university hospital who need help with medical costs, arranged through the hospital's Medical Social Work Officer, based on your answers.",
+      "A possible route for patients receiving treatment at a government or university hospital who need help with medical costs or medical equipment/devices, arranged through the hospital's Medical Social Work Officer, based on your answers.",
     verificationNote:
       "Official source reviewed. This route normally needs a referral from your specialist and an assessment by the hospital's Medical Social Work Officer (PKSP) — it is not a direct self-application.",
     finalDecisionBy: "KKM, via the hospital Medical Social Work Officer",
@@ -410,7 +410,7 @@ export const mockRoutes: SupportRoute[] = [
     title: "NKF Malaysia — Dialysis Welfare / Subsidy Route",
     provider: "National Kidney Foundation of Malaysia (NKF)",
     routeSummary:
-      "A possible route for dialysis or kidney patients seeking centre-based support, subject to a financial need/welfare assessment and NKF centre capacity, based on your answers.",
+      "A possible route for dialysis or kidney patients seeking centre-based support — NKF offers a Dialysis Welfare Subsidy, a Hardcore Poor Subsidy, and a Patient Transport Subsidy — subject to a financial need/welfare assessment and NKF centre capacity, based on your answers.",
     verificationNote:
       "Official source reviewed. This route needs official verification of your dialysis/kidney diagnosis and NKF centre capacity.",
     finalDecisionBy: "NKF Malaysia, with MOH subsidy route where applicable",
