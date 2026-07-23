@@ -10,6 +10,7 @@ import {
 } from "@/data/questionnaire";
 import { getRouteMatches, type MatchLabel, type RouteMatch } from "@/lib/engine";
 import { DISCLAIMER_TEXT } from "@/lib/safety";
+import { downloadChecklist } from "@/lib/checklist";
 import { RYTSAssistantBar } from "@/components/RYTSAssistantBar";
 
 // Session-scoped only (cleared when the tab closes) — this is enough to
@@ -256,6 +257,17 @@ export default function CancerSupportPage() {
                     Try adjusting your answers or check official sources directly.
                   </p>
                 </div>
+              )}
+
+              {/* Checklist download */}
+              {routeMatches.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => downloadChecklist(routeMatches)}
+                  className="flex h-12 w-full items-center justify-center rounded-xl border border-teal bg-surface px-5 text-base font-semibold text-teal-deep transition-colors hover:bg-teal-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
+                >
+                  Download checklist
+                </button>
               )}
 
               {/* Restart button */}

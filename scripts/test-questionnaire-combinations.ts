@@ -2,6 +2,7 @@ import { getRouteMatches, type SupportCheckInput } from "@/lib/engine";
 import { mockRoutes, validateMockRoutes, type SupportRoute } from "@/data/mockRoutes";
 import { scanUnsafeTerms } from "@/lib/safety";
 import { questionnaire } from "@/data/questionnaire";
+import { buildChecklistText } from "@/lib/checklist";
 
 const SUPPORT_NEEDS = ["treatment-cost", "transport", "medicine-equipment", "general"] as const;
 const HOUSEHOLD_BANDS = ["b40", "m40", "unknown"] as const;
@@ -99,6 +100,21 @@ function main() {
                   input,
                   routeIds,
                   error: `Route "${route.id}" contains forbidden terms: ${unsafe.join(", ")}`,
+                });
+              }
+            }
+
+            // Also scan the exported checklist text (the same content a user
+            // downloads and brings to a hospital/agency counter).
+            if (matches.length > 0) {
+              const checklistText = buildChecklistText(matches, new Date("2026-01-01"));
+              const unsafeChecklist = scanUnsafeTerms(checklistText);
+              if (unsafeChecklist.length > 0) {
+                errorCount++;
+                results.push({
+                  input,
+                  routeIds,
+                  error: `Checklist export contains forbidden terms: ${unsafeChecklist.join(", ")}`,
                 });
               }
             }
