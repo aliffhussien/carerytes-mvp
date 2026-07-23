@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:combinations": "npx tsx scripts/test-questionnaire-combinations.ts"
   },
   "dependencies": {
     "next": "16.2.11",
