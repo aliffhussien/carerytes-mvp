@@ -1,4 +1,4 @@
-import { getPossibleRoutes, type SupportCheckInput } from "@/lib/engine";
+import { getRouteMatches, type SupportCheckInput } from "@/lib/engine";
 import { mockRoutes, validateMockRoutes, type SupportRoute } from "@/data/mockRoutes";
 import { scanUnsafeTerms } from "@/lib/safety";
 import { questionnaire } from "@/data/questionnaire";
@@ -76,18 +76,19 @@ function main() {
           };
 
           try {
-            const routes = getPossibleRoutes(input);
-            const routeIds = routes.map((r) => r.id);
+            const matches = getRouteMatches(input);
+            const routeIds = matches.map((m) => m.route.id);
             routeIds.forEach((id) => routeHitCounts.set(id, (routeHitCounts.get(id) ?? 0) + 1));
             if (routeIds.length === 0) zeroRouteCount++;
 
-            // Scan the rendered copy of every matched route as a final safety net
-            // (defence in depth on top of validateMockRoutes()).
-            for (const route of routes) {
+            // Scan the rendered copy of every matched route (including the engine's
+            // generated reason text) as a final safety net, on top of validateMockRoutes().
+            for (const { route, reason } of matches) {
               const text = [
                 route.title,
                 route.routeSummary,
                 route.verificationNote,
+                reason,
                 ...route.missingInformation,
                 ...route.documentsToPrepare,
               ].join(" ");

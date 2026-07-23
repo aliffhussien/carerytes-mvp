@@ -8,15 +8,15 @@ import {
   toSupportCheckInput,
   type QuestionnaireAnswers,
 } from "@/data/questionnaire";
-import { getPossibleRoutes } from "@/lib/engine";
+import { getRouteMatches, type MatchLabel, type RouteMatch } from "@/lib/engine";
 import { DISCLAIMER_TEXT } from "@/lib/safety";
-import type { SupportRoute } from "@/data/mockRoutes";
 import { RYTSAssistantBar } from "@/components/RYTSAssistantBar";
 
 export default function CancerSupportPage() {
   const router = useRouter();
   const [stepIndex, setStepIndex] = useState(0);
   const [answers, setAnswers] = useState<QuestionnaireAnswers>({});
+  const [assistantBarHeight, setAssistantBarHeight] = useState(96);
 
   const isReviewStep = stepIndex === questionnaire.length;
   const currentQuestion = isReviewStep ? null : questionnaire[stepIndex];
@@ -28,8 +28,8 @@ export default function CancerSupportPage() {
     () => toSupportCheckInput(answers),
     [answers]
   );
-  const possibleRoutes = useMemo(
-    () => (supportCheckInput ? getPossibleRoutes(supportCheckInput) : []),
+  const routeMatches = useMemo(
+    () => (supportCheckInput ? getRouteMatches(supportCheckInput) : []),
     [supportCheckInput]
   );
 
@@ -98,7 +98,10 @@ export default function CancerSupportPage() {
         </div>
       )}
 
-      <main className="flex flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 pb-24">
+      <main
+        className="flex flex-1 flex-col overflow-y-auto px-4 py-6 sm:px-6 sm:py-8"
+        style={{ paddingBottom: assistantBarHeight + 16 }}
+      >
         <div className="mx-auto flex w-full max-w-md flex-col gap-6 sm:max-w-lg">
           {/* Questionnaire Question */}
           {!isReviewStep && currentQuestion && (
@@ -182,14 +185,14 @@ export default function CancerSupportPage() {
               </div>
 
               {/* Routes or empty state */}
-              {possibleRoutes.length > 0 ? (
+              {routeMatches.length > 0 ? (
                 <div
                   className="flex flex-col gap-4"
                   role="region"
                   aria-label="Possible routes"
                 >
-                  {possibleRoutes.map((route) => (
-                    <RouteCard key={route.id} route={route} />
+                  {routeMatches.map((match) => (
+                    <RouteCard key={match.route.id} match={match} />
                   ))}
                 </div>
               ) : (
@@ -225,22 +228,39 @@ export default function CancerSupportPage() {
         currentStep={stepIndex}
         isReviewStep={isReviewStep}
         onCommand={handleAssistantCommand}
+        onHeightChange={setAssistantBarHeight}
       />
     </div>
   );
 }
 
-function RouteCard({ route }: { route: SupportRoute }) {
+const MATCH_LABEL_STYLES: Record<MatchLabel, string> = {
+  "Likely relevant": "border-success-border bg-success-bg text-success-text",
+  "Maybe relevant": "border-info-border bg-info-bg text-info-text",
+  "Not enough information": "border-border bg-surface-subtle text-text-muted",
+  "Needs official verification": "border-warning-border bg-warning-bg text-warning-text",
+};
+
+function RouteCard({ match }: { match: RouteMatch }) {
+  const { route, matchLabel, reason } = match;
   return (
     <article
       className="rounded-2xl border border-border bg-surface p-5 shadow-[0_8px_30px_rgba(15,23,42,0.06)]"
-      aria-label={`${route.title} from ${route.provider}`}
+      aria-label={`${route.title} from ${route.provider} — ${matchLabel}`}
     >
-      <h2 className="text-lg font-bold text-foreground">{route.title}</h2>
+      <span
+        className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${MATCH_LABEL_STYLES[matchLabel]}`}
+      >
+        {matchLabel}
+      </span>
+
+      <h2 className="mt-3 text-lg font-bold text-foreground">{route.title}</h2>
       <p className="mt-1 text-sm text-text-muted">{route.provider}</p>
       <p className="mt-4 text-sm leading-6 text-text-secondary">
         {route.routeSummary}
       </p>
+
+      <p className="mt-4 text-sm leading-6 text-text-secondary">{reason}</p>
 
       <p className="mt-4 text-sm leading-6 text-warning-text">
         {route.verificationNote}

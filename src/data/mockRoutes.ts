@@ -406,6 +406,56 @@ export const mockRoutes: SupportRoute[] = [
     ],
   },
   {
+    id: "nkf-dialysis",
+    title: "NKF Malaysia — Dialysis Welfare / Subsidy Route",
+    provider: "National Kidney Foundation of Malaysia (NKF)",
+    routeSummary:
+      "A possible route for dialysis or kidney patients seeking centre-based support, subject to a financial need/welfare assessment and NKF centre capacity, based on your answers.",
+    verificationNote:
+      "Official source reviewed. This route needs official verification of your dialysis/kidney diagnosis and NKF centre capacity.",
+    finalDecisionBy: "NKF Malaysia, with MOH subsidy route where applicable",
+    sourceLabel: "Official source",
+    officialSourceUrl: "https://nkf.org.my/patient-welfare/",
+    missingInformation: [
+      "Dialysis/kidney diagnosis and medical documents",
+      "Income and financial status documents",
+      "NKF centre capacity in your area",
+    ],
+    documentsToPrepare: [
+      "IC",
+      "Dialysis/medical documents",
+      "Bills and salary slips / income proof",
+      "NKF centre application forms",
+    ],
+  },
+  {
+    id: "insurance-takaful-checklist",
+    title: "Insurance / Takaful Generic Claim Checklist",
+    provider: "Your insurer / takaful operator",
+    routeSummary:
+      "A general checklist for insurance or takaful claims that may match hospitalisation, critical illness, or personal accident coverage, based on your answers.",
+    verificationNote:
+      "This is a checklist only, not financial or insurance advice. This route needs official verification of your specific policy terms, waiting period, and exclusions with your insurer or takaful operator.",
+    finalDecisionBy: "Your insurer / takaful operator",
+    sourceLabel: "Claim guide reference",
+    officialSourceUrl: "https://www.takaful-malaysia.com.my/en/claim-guide/",
+    missingInformation: [
+      "Whether you hold an insurance/takaful policy",
+      "Policy/certificate number and coverage type",
+      "Whether your situation matches a covered claim type",
+    ],
+    documentsToPrepare: [
+      "IC",
+      "Claim form",
+      "Policy/certificate number",
+      "Medical report / doctor statement",
+      "Diagnosis report and investigation results",
+      "Original receipts and itemised bills",
+      "Discharge summary / referral letter (if applicable)",
+      "Bank account details",
+    ],
+  },
+  {
     id: "zakat-referral-no-online-scheme",
     title: "State Zakat / Baitulmal — Direct Referral",
     provider: "State Zakat / Baitulmal Office",

@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { ChatCircleDots, Microphone, PaperPlaneTilt } from "@phosphor-icons/react";
 
 type RYTSAssistantBarProps = {
   currentStep: number;
   isReviewStep: boolean;
   onCommand: (command: string) => void;
+  onHeightChange?: (height: number) => void;
 };
 
 export function RYTSAssistantBar({
   currentStep,
   isReviewStep,
   onCommand,
+  onHeightChange,
 }: RYTSAssistantBarProps) {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<
@@ -19,6 +22,7 @@ export function RYTSAssistantBar({
   >([]);
   const [isExpanded, setIsExpanded] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
   const getContextMessage = (): string => {
     if (isReviewStep) {
@@ -77,8 +81,19 @@ export function RYTSAssistantBar({
     }
   }, [isExpanded]);
 
+  // Report height directly whenever something that changes it happens
+  // (expand/collapse, or the message list growing) — measuring after React
+  // has committed the new layout is more reliable here than ResizeObserver.
+  useEffect(() => {
+    if (!onHeightChange || !barRef.current) return;
+    onHeightChange(barRef.current.getBoundingClientRect().height);
+  }, [isExpanded, messages.length, onHeightChange]);
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg">
+    <div
+      ref={barRef}
+      className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg"
+    >
       {/* Expanded chat area */}
       {isExpanded && (
         <div className="max-h-64 overflow-y-auto px-4 py-3 flex flex-col gap-2">
@@ -118,7 +133,7 @@ export function RYTSAssistantBar({
           aria-label="Toggle RYTS Assistant"
           title="Ask RYTS Assistant"
         >
-          <span className="text-lg">💬</span>
+          <ChatCircleDots size={20} weight="regular" />
         </button>
 
         {isExpanded && (
@@ -144,7 +159,7 @@ export function RYTSAssistantBar({
               aria-label="Voice input (coming soon)"
               title="Voice input coming soon"
             >
-              <span className="text-lg">🎤</span>
+              <Microphone size={20} weight="regular" />
             </button>
 
             <button
@@ -154,7 +169,7 @@ export function RYTSAssistantBar({
               className="flex-shrink-0 h-10 w-10 rounded-lg border border-teal bg-teal flex items-center justify-center text-white hover:bg-teal-deep disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-deep"
               aria-label="Send message"
             >
-              <span className="text-lg">→</span>
+              <PaperPlaneTilt size={20} weight="regular" />
             </button>
           </>
         )}
